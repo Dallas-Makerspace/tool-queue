@@ -7,3 +7,9 @@ functions:
     tool-queue-api:
         lang: dockerfile
         image: dallasmakerspace/tool-queue:latest
+        environment:
+            MONGO_HOST: 046d0fad-bb59-49d6-af47-6ef2ff048400.mlab.com
+            MONGO_PORT: 27017
+            MONGO_USERNAME: 046d0fad-bb59-49d6-af47-6ef2ff048400
+            MONGO_PASSWORD: 2501d658-628d-4a29-837a-f23d97db34b9
+            MONGO_DBNAME: toolqueue
