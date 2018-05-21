@@ -1,0 +1,37 @@
+sudo: required
+services:
+  - docker
+env:
+  global:
+    - IMAGE_NAME=acme-corp/cake-service
+    - REGISTRY_USER=myrobot
+    # REGISTRY_PASS=...
+    - secret: "<something long>"
+language: python
+python:
+  - "3.3"
+  - "3.4"
+  - "3.5"
+  - "3.6"
+# command to install dependencies
+install:
+  - pip install -r requirements.txt
+script:
+  - pytest
+after_success:
+  - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+  - export REPO=dallasmakerspace/tool-queue
+  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+  - docker build -f Dockerfile -t $REPO:$COMMIT .
+  - docker tag $REPO:$COMMIT $REPO:$TAG
+  - docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
+  - docker push $REPO
+deploy:
+ provider: heroku
+ api-key: 
+  secure: $HEROKU_API_KEY
+ app: dms-queue-board
+ provider: script
+ script: docker push "${IMAGE_NAME}:latest" && docker push "${IMAGE_NAME}:${version}"
+ on:
+    branch: master
