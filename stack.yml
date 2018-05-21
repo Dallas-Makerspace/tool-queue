@@ -1,0 +1,9 @@
+---
+provider:
+    name: faas
+    gateway: http://apps.communitygrid.dallasmakerspace.org
+
+functions:
+    tool-queue-api:
+        lang: dockerfile
+        image: dallasmakerspace/tool-queue:latest
