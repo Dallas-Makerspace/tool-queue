@@ -1,0 +1,31 @@
+---
+common: &default_settings
+        license_key: abc123
+        agent_enabled: true
+        app_name: Queue-Board
+        high_security: false
+        enable_auto_app_naming: true
+        enable_auto_transaction_naming: true
+        log_level: info
+        audit_mode: false
+        log_file_count: 1
+        log_limit_in_kbytes: 0
+        log_delay: false
+        log_file_name: newrelic_agent.log
+        ssl: true
+
+
+development:        
+        <<: *default_settings
+        app_name: Queue-Board (Dev)
+
+test:        
+        <<: *default_settings
+        app_name: Queue-Board (QA)
+
+staging:        
+        <<: *default_settings
+        app_name: Queue-Board (Staging)
+
+production:        
+        <<: *default_settings
