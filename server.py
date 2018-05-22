@@ -31,31 +31,46 @@ __version__ = '.'.join([str(__major__), str(__minor__), str(__patch__)])
 __classifiers__ = [ __status__, __language__ ] + __audience__
 
 import os
+from redis import StrictRedis
 
 from eve import Eve
 from flask.ext.bootstrap import Bootstrap
 from eve_docs import eve_docs
 
-
-## Models
-class People(dict):
+## Schema
+class SchemaObject(dict):
     def __init__(self):
         self['item_title'] = self.__class__.__name__.lower()
-        self['additional_lookup'] = {
-            'url': 'regex("[\w]+")',
-            'field': 'lastname'
-        }
-        self['schema'] = {
-          'firstname': { 'type': str(), 'maxlength': int(10), 'minlength': int(1) },
-          'lastname':  { 'type': str(), 'maxlength': int(10), 'minlength': int(1), 'required': True, 'unique': True }
-        }
-
-## Schema
+        self['schema'] = {}
+        
+    def add_field(self, field={}):
+        self['schema'].update(field)
+        
+    def add_lookup(self, lookup={}):
+        self['additional_lookup'] = lookup
+        
 class Schema(dict):
     def __init__(self):
         self['people'] = People()
         self['computers'] = Computers()
 
+## Caching
+class Caching(StrictRedis):
+    def __init__(self, app):
+        super(self).__init__()
+        super(self).from_url(os.environ.get('MONGO_HOST', 'redis://cache:6379'))
+
+## Models
+class People(SchemaObject):
+    def __init__(self):
+        super(People, self).__init__()
+        self.addlookup({
+            'url': 'regex("[\w]+")',
+            'field': 'lastname'
+        })
+        self.add_field({'firstname': { 'type': str(), 'maxlength': int(10), 'minlength': int(1) })
+        self.add_field({'lastname':  { 'type': str(), 'maxlength': int(10), 'minlength': int(1), 'required': True, 'unique': True })
+        
 ### AWS lambda, sensible DB connection settings are stored in environment variables.
 class ApiSettings(dict):
     def __init__(self):
@@ -101,7 +116,7 @@ class ApiSettings(dict):
 
 ## Runner
 def main():
-    app = Eve(settings=ApiSettings())
+    app = Eve(settings=ApiSettings(), redis=Caching())
     Bootstrap(app)
     app.register_blueprint(eve_docs, url_prefix='/docs')
   
