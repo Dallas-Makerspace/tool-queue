@@ -37,7 +37,7 @@ from eve import Eve
 from flask.ext.bootstrap import Bootstrap
 from eve_docs import eve_docs
 
-## Schema
+## Schema, Models, and Datastore
 class SchemaObject(dict):
     def __init__(self):
         self['item_title'] = self.__class__.__name__.lower()
@@ -48,17 +48,14 @@ class SchemaObject(dict):
         
     def add_lookup(self, lookup={}):
         self['additional_lookup'] = lookup
-        
-class Schema(dict):
-    def __init__(self):
-        self['people'] = People()
-        self['computers'] = Computers()
 
-## Caching
-class Caching(StrictRedis):
-    def __init__(self, app):
-        super(self).__init__()
-        super(self).from_url(os.environ.get('MONGO_HOST', 'redis://cache:6379'))
+class Database(dict):
+    def __init__(self):
+        self['MONGO_HOST']       = os.environ.get('MONGO_HOST')
+        self['MONGO_PORT']       = os.environ.get('MONGO_PORT')
+        self['MONGO_USERNAME']   = os.environ.get('MONGO_USERNAME')
+        self['MONGO_PASSWORD']   = os.environ.get('MONGO_PASSWORD')
+        self['MONGO_DBNAME']     = os.environ.get('MONGO_DBNAME')
 
 ## Models
 class People(SchemaObject):
@@ -68,37 +65,52 @@ class People(SchemaObject):
             'url': 'regex("[\w]+")',
             'field': 'lastname'
         })
-        self.add_field({'firstname': { 'type': str(), 'maxlength': int(10), 'minlength': int(1) })
-        self.add_field({'lastname':  { 'type': str(), 'maxlength': int(10), 'minlength': int(1), 'required': True, 'unique': True })
         
-### AWS lambda, sensible DB connection settings are stored in environment variables.
-class ApiSettings(dict):
+        self.add_field({ 'firstname': { 
+            'type': str(), 
+            'maxlength': int(10), 
+            'minlength': int(1)
+        }})
+        
+        self.add_field({'lastname':  { 
+            'type': str(), 
+            'maxlength': int(10), 
+            'minlength': int(1), 
+            'required': True, 
+            'unique': True
+        }})
+        
+
+class Schema(dict):
+    def __init__(self):
+        self['DOMAIN'] = {
+            'people': People(),
+            'computers': Computers()
+        }
+        
+## Caching
+class Caching(StrictRedis):
+    def __init__(self, app):
+        super(self).__init__()
+        super(self).from_url(os.environ.get('MONGO_HOST', 'redis://cache:6379'))
+
+# API Settings
+class Api(dict):
     def __init__(self):
         self['URL_PREFIX'] = '/api'
         self['API_VERSION'] = str(__version__)
 
-        self.database()
-        self.methods()
-        self.media()
-        self.cache()
-        self.schema()
-        
-    def database(self):
-        self['MONGO_HOST']       = os.environ.get('MONGO_HOST')
-        self['MONGO_PORT']       = os.environ.get('MONGO_PORT')
-        self['MONGO_USERNAME']   = os.environ.get('MONGO_USERNAME')
-        self['MONGO_PASSWORD']   = os.environ.get('MONGO_PASSWORD')
-        self['MONGO_DBNAME']     = os.environ.get('MONGO_DBNAME')
-        
-    def methods(self, methods=list())
+class Methods(dict):
+    def __init__(self, methods=[])
     
         if not methods: 
           methods = ['GET', 'POST', 'DELETE']
         
         self['RESOURCE_METHODS'] = methods
         self['ITEM_METHODS'] = methods
-        
-    def media(self, media_info=[], as_base64=False, as_url=True)
+
+class Media(dict):
+    def __init__(self, media_info=[], as_base64=False, as_url=True)
     
         if not media_info:
           media_info = ['content_type', 'name', 'length']
@@ -106,19 +118,22 @@ class ApiSettings(dict):
         self['EXTENDED_MEDIA_INFO']           = media_info
         self['RETURN_MEDIA_AS_BASE64_STRING'] = as_base64
         self['RETURN_MEDIA_AS_URL']           = as_url
-        
-    def cache(self, age=20):
+
+class Cache(dict):         
+    def __init__(self, age=20):
         self['CACHE_CONTROL'] = '='.join("max-age",age)
         self['CACHE_EXPIRES'] = age
-        
-    def schema(self):
-      self['DOMAIN'] = Schema
+                         
+### AWS lambda, sensible DB connection settings are stored in environment variables.
+class ApiSettings(Api, Database, Methods, Media, Cache, Schema):
+    def __init__(self):
+        super(ApiSettings, self).__init__()
 
 ## Runner
 def main():
     app = Eve(settings=ApiSettings(), redis=Caching())
     Bootstrap(app)
     app.register_blueprint(eve_docs, url_prefix='/docs')
-  
+
 if __name__ == '__main__':
     main()
